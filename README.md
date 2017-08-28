@@ -21,7 +21,9 @@ m by l) with vector input a (the dependence on the
 entries of a may be nonlinear), and B is a l by n
 matrix. What the code requires is a function for
 evaluating F(a) and dF(a)/da_i for any i (see 
-code documentation for more detail). 
+code documentation for more detail). It is often the
+case that dF(a)/da_i is a sparse matrix. In that
+case, it is recommended to return a sparse matrix.
 
 The VARP2 algorithm is based on the following 
 conference proceedings report: 
@@ -66,10 +68,9 @@ varpro2.m.fast).
 
 ## How to use
 
-If you'd like to see how to use the OPTDMD wrappers
-(for computing the optimized dynamic mode decomposition)
+If you'd like to see how to use VARPRO2
 the best place to start is to check out simple_example.m
-(in "examples" folder)
+(in "example" folder)
 
 ## Updates
 
@@ -78,8 +79,9 @@ the issues tab on GitHub.
 
 ## Citing this software
 
-We ask that you cite the original Golub and LeVeque paper (see above)
-if you use this software as part of academic research.
+We ask that you cite this software and the original 
+Golub and LeVeque paper (see above) if you use this 
+software as part of academic research.
 
 ## License 
 
