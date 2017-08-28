@@ -79,9 +79,9 @@ the issues tab on GitHub.
 
 ## Citing this software
 
-We ask that you cite this software and the original 
-Golub and LeVeque paper (see above) if you use this 
-software as part of academic research.
+We ask that you cite this software [![DOI](https://zenodo.org/badge/101695637.svg)](https://zenodo.org/badge/latestdoi/101695637) 
+and the original Golub and LeVeque paper (see above) 
+if you use this software as part of academic research.
 
 ## License 
 
