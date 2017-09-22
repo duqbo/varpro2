@@ -63,6 +63,11 @@ function opts = varpro_opts(varargin)
 %   the full expression for the Jacobian or Kaufman's 
 %   approximation.
 %
+% 'ifprint' (1) --- flag determines whether or not to 
+%   print info on progress of optimization
+%
+% 'ptf' (1) --- prints every ptf steps
+%
 % Author: Travis Askham
 %
 % Copyright 2017 Travis Askham
@@ -86,6 +91,8 @@ opts.maxiter = 30;
 opts.tol = 1.0e-6;
 opts.eps_stall = 1.0e-12;
 opts.iffulljac = 1;
+opts.ifprint = 1;
+opts.ptf = 1;
 
 % minimum values (in some reasonable sense)
 
@@ -98,6 +105,8 @@ optsmin.maxiter = 0;
 optsmin.tol = 0.0;
 optsmin.eps_stall = -Inf;
 optsmin.iffulljac = -Inf;
+optsmin.ifprint = -Inf;
+optsmin.ptf = 0;
 
 % maximum values (in some reasonable sense)
 
@@ -110,6 +119,8 @@ optsmax.maxiter = 1.0e12;
 optsmax.tol = 1.0e16;
 optsmax.eps_stall = 1.0;
 optsmax.iffulljac = Inf;
+optsmax.ifprint = Inf;
+optsmax.ptf = Inf;
 
 % check if input comes in pairs
 
