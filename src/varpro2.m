@@ -319,7 +319,7 @@ for iter = 1:maxiter
   err(iter) = errlast;
 
   if (ifprint == 1 && mod(iter,ptf) == 0)
-    fprintf('step %d err %e\n',iter,errlast)
+    fprintf('step %d err %e lambda %e\n',iter,errlast,lambda0)
   end
   
   if (errlast < tol)
