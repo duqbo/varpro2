@@ -36,7 +36,6 @@ function [b,alpha,niter,err,imode,alphas] = varpro2(y,t,phi,dphi, ...
 % varargin{1} = copts - linear constraint options structure.
 %                       See varpro_lsqlinopts.m for details.
 %                       allows you to enforce linear constraints.
-%              
 %
 % the constrained version uses lsqlin from the optimization
 % toolbox. the bounds enforced are
@@ -51,6 +50,14 @@ function [b,alpha,niter,err,imode,alphas] = varpro2(y,t,phi,dphi, ...
 %
 % NOTE: Linear constraints require MATLAB R2013a
 % or later
+% 
+% varargin{2} = gamma - tikhonov regularization term. if provided
+%                       the minimization problem becomes 
+%
+%                min  | y - phi*b |_F^2 + | gamma alpha |_2^2 
+%
+%               where gamma is either a scalar or matrix.      
+%
 %
 % Output:
 %
@@ -74,7 +81,7 @@ function [b,alpha,niter,err,imode,alphas] = varpro2(y,t,phi,dphi, ...
 % See also VARPRO_OPTS, VARPRO_LSQLINOPTS, LSQLIN
 
 %
-% Copyright (c) 2017 Travis Askham
+% Copyright (c) 2018 Travis Askham
 %
 % Available under the MIT license
 %
@@ -144,13 +151,41 @@ if (nargin > 10 && ~isempty(varargin{1}))
   ifreal = varpro2_getfield(copts,copts_default,'ifreal');
   lsqlinopts = varpro2_getfield(copts,copts_default,'lsqlinopts');
   
-end			 
+end	
+
+% if Tikhonov regularization is on, get it		 
+
+if (nargin > 11 && ~isempty(varargin{2}))
+
+  iftik = 1;
+
+  gamma =  varargin{2};
+  [mg,ng] = size(gamma);
+
+  if (mg == 1 && ng == 1)
+    gamma = gamma*eye(ia);
+  elseif (mg ~= ia || ng ~= ia)
+    error('Tikhonov regularization matrix of incorrect size');
+    return
+  end
+  
+else
+    iftik = 0;
+    gamma = zeros(ia);
+end
+
 
 % initialize values
 
 alpha = alpha_init;
 alphas = zeros(length(alpha),maxiter);
-djacmat = zeros(m*is,ia);
+if (iftik == 1)
+  djacmat = zeros(m*is+ia,ia);
+  rhstemp = zeros(m*is+ia,1);
+else
+  djacmat = zeros(m*is,ia);
+  rhstemp = zeros(m*is,1);
+end
 err = zeros(maxiter,1);
 res_scale = norm(y,'fro');
 scales = zeros(ia,1);
@@ -167,7 +202,7 @@ S = S(1:irank,1:irank);
 V = V(:,1:irank);
 b = phimat\y;
 res = y - phimat*b;
-errlast = norm(res,'fro')/res_scale;
+errlast = sqrt(norm(res,'fro')^2 + norm(gamma*alpha)^2)/res_scale;
 
 imode = 0;
 
@@ -181,19 +216,23 @@ for iter = 1:maxiter
     if (iffulljac == 1)
 				% use full expression for Jacobian
       djacb = U*(S\(V'*(sparse(dphitemp'*res))));
-      djacmat(:,j) = (djaca(:) + djacb(:));
+      djacmat(1:m*is,j) = (djaca(:) + djacb(:));
     else
 				% use approximate expression
-      djacmat(:,j) = djaca(:);
+      djacmat(1:m*is,j) = djaca(:);
     end
 		   % the scales give the "marquardt" part of the algo.
     scales(j) = 1;
     if (ifmarq == 1)
-      scales(j) = min(norm(djacmat(:,j)),1);
+      scales(j) = min(norm(djacmat(1:m*is,j)),1);
       scales(j) = max(scales(j),1e-6);
     end
   end
-  
+
+  if (iftik == 1)
+     djacmat(m*is+1:end,:) = gamma;
+  end
+
 	% loop to determine lambda (lambda gives the "levenberg" part)
 
 			% pre-compute components that don't depend on 
@@ -205,7 +244,11 @@ for iter = 1:maxiter
   ijpvt = 1:ia;
   ijpvt(jpvt) = ijpvt;
   rjac(1:ia,:) = triu(djacout(1:ia,:));
-  rhstop = xormqr_m('L','T',djacout,tau,res(:)); % Q'*res
+  rhstemp(1:m*is) = res(:);
+  if (iftik == 1)
+     rhstemp(m*is+1:end) = -gamma*alpha;
+  end
+  rhstop = xormqr_m('L','T',djacout,tau,rhstemp); % Q'*res
   scalespvt = scales(jpvt(1:ia)); % permute scales appropriately...
   rhs = [rhstop(1:ia); zeros(ia,1)]; % transformed right hand side
   
@@ -232,7 +275,7 @@ for iter = 1:maxiter
   phimat = phi(alpha0,t);
   b0 = phimat\y;
   res0 = y-phimat*b0;
-  err0 = norm(res0,'fro')/res_scale;
+  err0 = sqrt(norm(res0,'fro')^2 + norm(gamma*alpha0)^2)/res_scale;
   
 				% check if this is an improvement
   
@@ -252,7 +295,7 @@ for iter = 1:maxiter
     phimat = phi(alpha1,t);
     b1 = phimat\y;
     res1 = y-phimat*b1;
-    err1 = norm(res1,'fro')/res_scale;
+    err1 = sqrt(norm(res1,'fro')^2+norm(gamma*alpha1)^2)/res_scale;
     
     if (err1 < err0)
       lambda0 = lambda1;
@@ -287,7 +330,7 @@ for iter = 1:maxiter
       phimat = phi(alpha0,t);
       b0 = phimat\y;
       res0 = y-phimat*b0;
-      err0 = norm(res0,'fro')/res_scale;
+      err0 = sqrt(norm(res0,'fro')^2+norm(gamma*alpha0)^2)/res_scale;
       
       if (err0 < errlast) 
         break

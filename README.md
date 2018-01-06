@@ -13,17 +13,21 @@ dependence on others is linear. In particular,
 this software allows you to solve problems 
 of the form
 
-> min_{a,B} |X - F(a) B|_2 
+> min_{a,B} |X - F(a) B|_F^2 + | R*a |_2^2 
 
 where X is a data matrix of size m by n, F(a)
 is a matrix-valued function (matrices of dimension
 m by l) with vector input a (the dependence on the 
-entries of a may be nonlinear), and B is a l by n
-matrix. What the code requires is a function for
-evaluating F(a) and dF(a)/da_i for any i (see 
-code documentation for more detail). It is often the
-case that dF(a)/da_i is a sparse matrix. In that
-case, it is recommended to return a sparse matrix.
+entries of a may be nonlinear), R is a matrix,
+and B is a l by n matrix. What the code requires 
+is a function for evaluating F(a) and dF(a)/da_i for 
+any i (see code documentation for more detail).
+It is often the case that dF(a)/da_i is a sparse 
+matrix. In that case, it is recommended to return 
+a sparse matrix. The term with R is optional and 
+may be specified with either a scalar (corresponding 
+to Tikhonov regularization) or a matrix.
+
 
 The VARP2 algorithm is based on the following 
 conference proceedings report: 
