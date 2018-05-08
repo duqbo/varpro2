@@ -240,7 +240,8 @@ for iter = 1:maxiter
   
 		  % get pivots and lapack style qr for jacobian matrix
   
-  [djacout,jpvt,tau] = xgeqp3_m(djacmat);
+  [qout,djacout,jpvt] = qr(djacmat,0);
+  %[djacout,jpvt,tau] = xgeqp3_m(djacmat);
   ijpvt = 1:ia;
   ijpvt(jpvt) = ijpvt;
   rjac(1:ia,:) = triu(djacout(1:ia,:));
@@ -248,7 +249,8 @@ for iter = 1:maxiter
   if (iftik == 1)
      rhstemp(m*is+1:end) = -gamma*alpha;
   end
-  rhstop = xormqr_m('L','T',djacout,tau,rhstemp); % Q'*res
+  %rhstop = xormqr_m('L','T',djacout,tau,rhstemp); % Q'*res
+  rhstop = qout'*rhstemp;
   scalespvt = scales(jpvt(1:ia)); % permute scales appropriately...
   rhs = [rhstop(1:ia); zeros(ia,1)]; % transformed right hand side
   

@@ -44,32 +44,6 @@ algorithm and an explicit formula for the Jacobian.
 Note that as the problem may be nonconvex, what the
 algorithm finds is a local minimum.
 
-## Set-up
-
-For the most efficient version of this code, you
-must compile a mex binary. It can be difficult to 
-avoid platform-dependent issues for mex binaries,
-so please bear with us. 
-
-The first thing to try is to Open MatLab and run 
-setup.m to install. If the test runs and returns
-a small error, then the install was likely successful.
-
-If setup.m fails and you have experience with
-mex files, consider editing the compile flags in
-src/buildqrmex
-
-Please create an issue using the issues tab on
-the [optdmd GitHub page](https://github.com/duqbo/optdmd)
-if you are unable to get these files compiled on your
-system.
-
-If everything has failed, you can still run this code
-but with slower, less memory efficient routines. 
-To do this, copy varpro2.m.slow into varpro2.m in the
-src folder (the original fast version is saved in 
-varpro2.m.fast).
-
 ## How to use
 
 If you'd like to see how to use VARPRO2
