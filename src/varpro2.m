@@ -151,6 +151,15 @@ if (nargin > 10 && ~isempty(varargin{1}))
   ifreal = varpro2_getfield(copts,copts_default,'ifreal');
   lsqlinopts = varpro2_getfield(copts,copts_default,'lsqlinopts');
   
+  % force initial guess inside
+  jpvt = 1:length(alpha_init);
+  %[delta,ier] = varpro2_lsqlin(eye(length(alpha_init)),alpha_init, ...
+  %    alpha_init,jpvt,Ac,bc,Ace,bce,lbc,ubc,ifreal,lsqlinopts);
+  %alpha_init = alpha_init+delta;
+    %  ier
+  alpha_init = varpro2_lsqlin_prox(alpha_init,jpvt,Ac,bc, ...
+        Ace,bce,lbc,ubc,ifreal,lsqlinopts);
+  
 end	
 
 % if Tikhonov regularization is on, get it		 
@@ -260,18 +269,16 @@ for iter = 1:maxiter
 
   rjac(ia+1:2*ia,:) = lambda0*diag(scalespvt);
 
-  if (iflinconst == 1)
-    delta0 = varpro2_lsqlin(rjac,rhs,alpha,jpvt,Ac,bc, ...
-			    Ace,bce,lbc,ubc,ifreal,lsqlinopts);
-  else
-    delta0 = rjac\rhs;
-  end
+  delta0 = rjac\rhs;
   delta0 = delta0(ijpvt); % unscramble solution
   
 				% new alpha guess
   
   alpha0 = alpha + delta0;
-  
+  if (iflinconst == 1)
+      alpha0 = varpro2_lsqlin_prox(alpha0,jpvt,Ac,bc, ...
+				      Ace,bce,lbc,ubc,ifreal,lsqlinopts);
+  end
 				% corresponding residual
   
   phimat = phi(alpha0,t);
@@ -285,15 +292,15 @@ for iter = 1:maxiter
     
     lambda1 = lambda0/lamdown;
     rjac(ia+1:2*ia,:) = lambda1*diag(scalespvt);
-    if (iflinconst == 1)
-      delta1 = varpro2_lsqlin(rjac,rhs,alpha,jpvt,Ac,bc, ...
-			      Ace,bce,lbc,ubc,ifreal,lsqlinopts);
-    else
-      delta1 = rjac\rhs;
-    end
+    delta1 = rjac\rhs;
     delta1 = delta1(ijpvt); % unscramble solution      
 
     alpha1 = alpha + delta1;
+    if (iflinconst == 1)
+        alpha1 = varpro2_lsqlin_prox(alpha1,jpvt,Ac,bc, ...
+				      Ace,bce,lbc,ubc,ifreal,lsqlinopts);
+    end
+
     phimat = phi(alpha1,t);
     b1 = phimat\y;
     res1 = y-phimat*b1;
@@ -319,15 +326,16 @@ for iter = 1:maxiter
       
       lambda0 = lambda0*lamup;
       rjac(ia+1:2*ia,:) = lambda0*diag(scalespvt);
-      if (iflinconst == 1)
-	delta0 = varpro2_lsqlin(rjac,rhs,alpha,jpvt,Ac,bc, ...
-				Ace,bce,lbc,ubc,ifreal,lsqlinopts);
-      else
-	delta0 = rjac\rhs;
-      end
+
+      delta0 = rjac\rhs;
       delta0 = delta0(ijpvt); % unscramble solution
       
       alpha0 = alpha + delta0;
+      if (iflinconst == 1)
+        alpha0 = varpro2_lsqlin_prox(alpha0,jpvt,Ac,bc, ...
+    				      Ace,bce,lbc,ubc,ifreal,lsqlinopts);
+      end
+
 
       phimat = phi(alpha0,t);
       b0 = phimat\y;
@@ -451,17 +459,17 @@ function [delta,ier] = varpro2_lsqlin(rjac,rhs,alpha,jpvt,Ac,bc, ...
     end
     
     if (~isempty(Ace))
-      bce = bce-Ace*alphar;
+      bce = bce-Ace*alpha;
       Ace = Ace(:,jpvt);
     end
 
     if (~isempty(lbc))
-      lbc = lbc-alphar;
+      lbc = lbc-alpha;
       lbc = lbc(jpvt);
     end
     
     if (~isempty(ubc))
-      ubc = ubc-alphar;
+      ubc = ubc-alpha;
       ubc = ubc(jpvt);
     end
 
@@ -493,11 +501,79 @@ function [delta,ier] = varpro2_lsqlin(rjac,rhs,alpha,jpvt,Ac,bc, ...
     if (~isempty(ubc))
       ubc = ubc-alphar;
       ubc(1:ia) = ubc(jpvt);
-      ubc(ia+1:2*ia) = ubc(jpvt);
+      ubc(ia+1:2*ia) = ubc(ia+jpvt);
     end
-
+    
     deltar = lsqlin(rjacr,rhsr,Ac,bc,Ace,bce,lbc,ubc,[],opts);
     delta = deltar(1:end/2)+1i*deltar(end/2+1:end);
+
+  end
+    
+end
+
+function [alphanew,ier] = varpro2_lsqlin_prox(alpha,jpvt,Ac,bc, ...
+				      Ace,bce,lbc,ubc,ifreal,opts)
+
+  ia = length(alpha);
+  jpvt =jpvt(1:ia);
+
+  ier = 0;
+  alphanew = alpha;
+  
+  if (ifreal == 1)
+
+    if (~isreal(alpha) || ~isreal(rjac) || ~isreal(rhs))
+      ier = 1;
+      return
+    end
+    
+    if (~isempty(Ac))
+      Ac = Ac(:,jpvt);
+    end
+    
+    if (~isempty(Ace))
+      Ace = Ace(:,jpvt);
+    end
+
+    if (~isempty(lbc))
+      lbc = lbc(jpvt);
+    end
+    
+    if (~isempty(ubc))
+      ubc = ubc(jpvt);
+    end
+
+    mat = eye(ia);
+    
+    alphanew = lsqlin(mat,alpha,Ac,bc,Ace,bce,lbc,ubc,[],opts);
+  else
+  
+    alphar = [real(alpha); imag(alpha)];
+    ia2 = 2*ia;
+    mat = eye(ia2);
+    
+    if (~isempty(Ac))
+      Ac(:,1:ia) = Ac(:,jpvt);
+      Ac(:,ia+1:2*ia) = Ac(:,ia+jpvt);
+    end
+    
+    if (~isempty(Ace))
+      Ace(:,1:ia) = Ace(:,jpvt);
+      Ace(:,ia+1:2*ia) = Ace(:,ia+jpvt);      
+    end
+
+    if (~isempty(lbc))
+      lbc(1:ia) = lbc(jpvt);
+      lbc(ia+1:2*ia) = lbc(ia+jpvt);
+    end
+    
+    if (~isempty(ubc))
+      ubc(1:ia) = ubc(jpvt);
+      ubc(ia+1:2*ia) = ubc(ia+jpvt);
+    end
+    
+    alphanewr = lsqlin(mat,alphar,Ac,bc,Ace,bce,lbc,ubc,[],opts);
+    alphanew= alphanewr(1:end/2)+1i*alphanewr(end/2+1:end);
 
   end
     

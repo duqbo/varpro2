@@ -7,6 +7,5 @@
 
 % add appropriate folders to path
 
-addpath('./bin');
 addpath('./src');
 addpath('./examples');
