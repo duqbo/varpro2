@@ -81,10 +81,19 @@ ia = r;
 % the below has the effect of constraining the alphas to the
 % left half plane
 
+% this is used with the lsqlin facilities in example 2
+
 lbc = [-Inf*ones(size(alpha_init)); -Inf*ones(size(alpha_init))];
 ubc = [zeros(size(alpha_init)); Inf*ones(size(alpha_init))];
 
 copts = varpro_lsqlinopts('lbc',lbc,'ubc',ubc);
+
+% note that this prox fun finds the nearest point satisfying
+% the constraints
+
+% this is used as a generic prox function in example 3
+
+proxfun = @(alpha) min(real(alpha),0) + 1i*imag(alpha);
 
 %% compute modes in various ways
 
@@ -127,6 +136,25 @@ fprintf('example 2 --- fitting data with constraints, more iterations\n')
 fprintf('relative error in reconstruction %e\n',relerr_r)
 fprintf('relative error of eigenvalues %e\n',relerr_e)
 
+% 3 --- compute with extra iterations and constraints via prox
+
+opts = varpro_opts('maxiter',200,'ptf',10);
+
+[b,alpha3,niter,err,imode,alphas] = varpro2(xdata,ts,phi,dphi, ...
+        nt,r,nx,ia,alpha_init,opts,[],[],proxfun);
+
+% evaluate fit
+res = xdata - phi(alpha3,ts)*b;
+relerr_r = norm(res,'fro')/norm(xdata,'fro');
+
+% compare to actual eigenvalues
+indices = match_vectors(alpha3,evals);
+relerr_e = norm(alpha3(indices)-evals)/norm(evals);
+
+fprintf('example 3 --- fitting data with constraints, more iterations\n')
+fprintf('relative error in reconstruction %e\n',relerr_r)
+fprintf('relative error of eigenvalues %e\n',relerr_e)
+
 % plot resulting e-vals
 
 figure(1)
@@ -134,3 +162,4 @@ hold off
 scatter(real(alpha1),imag(alpha1),'bo')
 hold on
 scatter(real(alpha2),imag(alpha2),'rx')
+scatter(real(alpha3),imag(alpha3),'gd')
